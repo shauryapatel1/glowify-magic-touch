@@ -39,7 +39,7 @@ const FeatureSection = () => {
         </svg>
       ),
       title: "Natural Language Editing",
-      description: "Just type what you want: "Add sparkles at 3s" and watch the AI implement your vision."
+      description: "Just type what you want: \"Add sparkles at 3s\" and watch the AI implement your vision."
     }
   ];
 
