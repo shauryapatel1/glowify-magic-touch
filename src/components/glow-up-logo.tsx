@@ -19,13 +19,17 @@ const GlowUpLogo = ({
     lg: variant === "icon" ? "h-16 w-16" : "h-12",
   };
 
+  // Default color is now purple instead of white
+  const defaultColor = "#9b87f5"; 
+
   if (variant === "icon") {
     return (
       <svg
         viewBox="0 0 40 40"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className={cn("text-white", sizeClasses[size], className)}
+        className={cn(sizeClasses[size], className)}
+        style={{ color: defaultColor }}
         {...props}
       >
         <circle cx="20" cy="20" r="18" stroke="currentColor" strokeWidth="2" />
@@ -45,7 +49,8 @@ const GlowUpLogo = ({
       viewBox="0 0 120 40"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={cn("text-white", sizeClasses[size], className)}
+      className={cn(sizeClasses[size], className)}
+      style={{ color: defaultColor }}
       {...props}
     >
       <path
