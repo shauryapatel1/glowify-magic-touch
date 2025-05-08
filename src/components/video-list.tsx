@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { VideoGrid } from "./video/video-grid";
 import { VideoPlayerDialog } from "./video/video-player-dialog";
-import { Video, VideoStatus, processVideo, shareVideo } from "@/utils/videoUtils";
+import { Video, VideoStatus, processVideo, shareVideo, recordVideoView } from "@/utils/videoUtils";
 
 export const VideoList = () => {
   const { user } = useAuth();
@@ -29,7 +29,14 @@ export const VideoList = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setVideos(data || []);
+      
+      // Ensure we cast status to VideoStatus type
+      const typedVideos = data?.map(video => ({
+        ...video,
+        status: video.status as VideoStatus
+      })) || [];
+      
+      setVideos(typedVideos);
     } catch (error) {
       console.error("Error fetching videos:", error);
     } finally {
@@ -52,7 +59,7 @@ export const VideoList = () => {
           // Update the video in the list when its status changes
           setVideos(currentVideos => 
             currentVideos.map(video => 
-              video.id === payload.new.id ? payload.new as Video : video
+              video.id === payload.new.id ? {...payload.new, status: payload.new.status as VideoStatus} : video
             )
           );
           
