@@ -5,7 +5,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { GlowUpCard } from "@/components/ui/glow-up-card";
 import { GlowUpButton } from "@/components/ui/glow-up-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Eye, PlayCircle, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { Eye, PlayCircle, CheckCircle2, Clock, AlertTriangle, Share, Download } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 type Video = {
   id: string;
@@ -21,29 +25,111 @@ export const VideoList = () => {
   const { user } = useAuth();
   const [videos, setVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
+
+  const fetchVideos = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("videos")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setVideos(data || []);
+    } catch (error) {
+      console.error("Error fetching videos:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
-
-    const fetchVideos = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("videos")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (error) throw error;
-        setVideos(data || []);
-      } catch (error) {
-        console.error("Error fetching videos:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
+    
     fetchVideos();
-  }, [user]);
+    
+    // Set up a subscription for real-time updates
+    const channel = supabase
+      .channel('videos-updates')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'videos' },
+        (payload) => {
+          // Update the video in the list when its status changes
+          setVideos(currentVideos => 
+            currentVideos.map(video => 
+              video.id === payload.new.id ? payload.new as Video : video
+            )
+          );
+          
+          // Show toast notification for completed videos
+          if (payload.new.status === 'completed' && payload.old.status === 'processing') {
+            toast({
+              title: "Video Processing Complete",
+              description: `"${payload.new.title}" is ready to view!`,
+            });
+          }
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, toast]);
+
+  const handleProcessVideo = async (video: Video) => {
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
+    try {
+      // Call the process-video edge function
+      const { data, error } = await supabase.functions.invoke('process-video', {
+        body: { videoId: video.id, effect: 'enhance' }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Processing Started",
+        description: "Your video is being enhanced with AI effects.",
+      });
+      
+      // Refresh the videos list
+      fetchVideos();
+    } catch (error: any) {
+      console.error("Error processing video:", error);
+      toast({
+        title: "Processing Failed",
+        description: error.message || "There was an error processing your video.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleShareVideo = async (video: Video) => {
+    // In a production app, this would generate a sharing link
+    // For this demo, we'll simulate copying a link to clipboard
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/shared-video/${video.id}`
+      );
+      toast({
+        title: "Link Copied",
+        description: "Video sharing link copied to clipboard!",
+      });
+    } catch (error) {
+      console.error("Error copying link:", error);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -74,22 +160,35 @@ export const VideoList = () => {
         </TabsList>
         
         <TabsContent value="all" className="space-y-4">
-          {renderVideoGrid(videos)}
+          {renderVideoGrid(videos, handleProcessVideo, handleShareVideo, setSelectedVideo, setIsPlayerOpen)}
         </TabsContent>
         
         <TabsContent value="processing" className="space-y-4">
-          {renderVideoGrid(videos.filter(v => v.status === 'pending' || v.status === 'processing'))}
+          {renderVideoGrid(videos.filter(v => v.status === 'pending' || v.status === 'processing'), handleProcessVideo, handleShareVideo, setSelectedVideo, setIsPlayerOpen)}
         </TabsContent>
         
         <TabsContent value="completed" className="space-y-4">
-          {renderVideoGrid(videos.filter(v => v.status === 'completed'))}
+          {renderVideoGrid(videos.filter(v => v.status === 'completed'), handleProcessVideo, handleShareVideo, setSelectedVideo, setIsPlayerOpen)}
         </TabsContent>
       </Tabs>
+
+      <VideoPlayerDialog 
+        isOpen={isPlayerOpen} 
+        setIsOpen={setIsPlayerOpen} 
+        video={selectedVideo}
+        onShare={handleShareVideo}
+      />
     </div>
   );
 };
 
-const renderVideoGrid = (videos: Video[]) => {
+const renderVideoGrid = (
+  videos: Video[], 
+  onProcess: (video: Video) => void,
+  onShare: (video: Video) => void,
+  setSelectedVideo: (video: Video) => void,
+  setIsPlayerOpen: (open: boolean) => void
+) => {
   if (videos.length === 0) {
     return (
       <div className="text-center py-8 text-white/60">
@@ -101,13 +200,32 @@ const renderVideoGrid = (videos: Video[]) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {videos.map((video) => (
-        <VideoCard key={video.id} video={video} />
+        <VideoCard 
+          key={video.id} 
+          video={video} 
+          onProcess={onProcess}
+          onShare={onShare}
+          onView={() => {
+            setSelectedVideo(video);
+            setIsPlayerOpen(true);
+          }}
+        />
       ))}
     </div>
   );
 };
 
-const VideoCard = ({ video }: { video: Video }) => {
+const VideoCard = ({ 
+  video, 
+  onProcess, 
+  onShare,
+  onView
+}: { 
+  video: Video,
+  onProcess: (video: Video) => void,
+  onShare: (video: Video) => void,
+  onView: () => void
+}) => {
   const getStatusIcon = () => {
     switch (video.status) {
       case 'completed':
@@ -123,7 +241,10 @@ const VideoCard = ({ video }: { video: Video }) => {
 
   return (
     <GlowUpCard variant="glass" className="overflow-hidden">
-      <div className="relative aspect-video bg-gray-800 flex items-center justify-center">
+      <div 
+        className="relative aspect-video bg-gray-800 flex items-center justify-center cursor-pointer" 
+        onClick={video.status === 'completed' ? onView : undefined}
+      >
         {video.thumbnail_url ? (
           <img 
             src={video.thumbnail_url} 
@@ -152,13 +273,92 @@ const VideoCard = ({ video }: { video: Video }) => {
             {new Date(video.created_at).toLocaleDateString()}
           </span>
           
-          {video.status === 'completed' && (
-            <GlowUpButton size="sm" variant="outline" className="p-0">
-              <Eye className="w-4 h-4 mr-1" /> View
-            </GlowUpButton>
-          )}
+          <div className="flex gap-2">
+            {video.status === 'completed' ? (
+              <>
+                <GlowUpButton size="sm" variant="outline" onClick={() => onShare(video)}>
+                  <Share className="w-4 h-4 mr-1" /> Share
+                </GlowUpButton>
+                <GlowUpButton size="sm" variant="outline" onClick={onView}>
+                  <Eye className="w-4 h-4 mr-1" /> View
+                </GlowUpButton>
+              </>
+            ) : video.status === 'pending' ? (
+              <GlowUpButton size="sm" variant="outline" onClick={() => onProcess(video)}>
+                Process
+              </GlowUpButton>
+            ) : null}
+          </div>
         </div>
+
+        {video.status === 'processing' && (
+          <div className="mt-3">
+            <Progress value={45} className="h-1" />
+            <p className="text-xs text-white/50 mt-1 text-center">Processing with AI...</p>
+          </div>
+        )}
       </div>
     </GlowUpCard>
+  );
+};
+
+const VideoPlayerDialog = ({ 
+  isOpen, 
+  setIsOpen, 
+  video,
+  onShare
+}: { 
+  isOpen: boolean, 
+  setIsOpen: (open: boolean) => void, 
+  video: Video | null,
+  onShare: (video: Video) => void
+}) => {
+  if (!video) return null;
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogContent className="sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>{video.title}</DialogTitle>
+          {video.description && (
+            <DialogDescription>{video.description}</DialogDescription>
+          )}
+        </DialogHeader>
+        
+        <div className="relative aspect-video bg-black rounded-md overflow-hidden">
+          <video 
+            src={video.processed_url || ''} 
+            controls 
+            className="w-full h-full object-contain"
+            poster={video.thumbnail_url || undefined}
+          />
+        </div>
+        
+        <div className="flex justify-between items-center mt-4">
+          <span className="text-sm text-white/50">
+            Processed with GlowUp AI
+          </span>
+          
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => onShare(video)}
+            >
+              <Share className="w-4 h-4 mr-2" /> Share Video
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              asChild
+            >
+              <a href={video.processed_url || '#'} download target="_blank" rel="noopener noreferrer">
+                <Download className="w-4 h-4 mr-2" /> Download
+              </a>
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };

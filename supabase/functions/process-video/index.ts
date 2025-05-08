@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
 
   try {
     // Get video ID from the request
-    const { videoId } = await req.json();
+    const { videoId, effect } = await req.json();
 
     if (!videoId) {
       return new Response(
@@ -35,11 +35,10 @@ Deno.serve(async (req) => {
       .update({ status: 'processing' })
       .eq('id', videoId);
 
-    console.log(`Processing started for video ${videoId}`);
+    console.log(`Processing started for video ${videoId} with effect: ${effect || 'default'}`);
 
-    // Simulated processing with a background task
-    // In a real implementation, this would call an AI service or processing pipeline
-    EdgeRuntime.waitUntil(simulateProcessing(supabaseAdmin, videoId));
+    // Process in background to avoid timeout
+    EdgeRuntime.waitUntil(processVideoWithAI(supabaseAdmin, videoId, effect));
 
     return new Response(
       JSON.stringify({ message: 'Video processing started' }),
@@ -55,10 +54,9 @@ Deno.serve(async (req) => {
   }
 });
 
-// This simulates the video processing pipeline
-// In a real implementation, this would be replaced with actual AI video processing
-async function simulateProcessing(supabaseClient, videoId) {
-  console.log(`Starting background task for video ${videoId}`);
+// Enhanced AI video processing function
+async function processVideoWithAI(supabaseClient, videoId, effect = 'enhance') {
+  console.log(`Starting AI processing for video ${videoId} with effect: ${effect}`);
   
   try {
     // Get the video details
@@ -70,17 +68,30 @@ async function simulateProcessing(supabaseClient, videoId) {
 
     if (error) throw error;
     if (!video) throw new Error('Video not found');
-
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 15000));
+    
+    // Get the video file URL
+    const originalUrl = video.original_url;
+    if (!originalUrl) throw new Error('Original video URL not found');
+    
+    console.log(`Processing video from URL: ${originalUrl}`);
+    
+    // In a real implementation, this would call computer vision APIs or ML services
+    // Here we're simulating the AI processing time
+    await new Promise(resolve => setTimeout(resolve, 8000));
+    
+    // Generate a thumbnail from the video (simulated)
+    const thumbnailUrl = await generateThumbnail(supabaseClient, video);
+    
+    // Apply AI effects (simulated)
+    const processedUrl = await applyAIEffects(supabaseClient, video, effect);
     
     // Update the video with processed details
-    // In a real implementation, this would include the actual processed video URL
     await supabaseClient
       .from('videos')
       .update({
         status: 'completed',
-        processed_url: video.original_url, // In real implementation, this would be a different URL
+        processed_url: processedUrl,
+        thumbnail_url: thumbnailUrl,
         updated_at: new Date().toISOString()
       })
       .eq('id', videoId);
@@ -98,4 +109,24 @@ async function simulateProcessing(supabaseClient, videoId) {
       })
       .eq('id', videoId);
   }
+}
+
+// Simulated thumbnail generation
+async function generateThumbnail(supabaseClient, video) {
+  // In a real implementation, this would extract a frame from the video
+  // For now, we'll just create a placeholder with the video title
+  
+  // Return the original URL as the thumbnail for demo purposes
+  // In production, this would be a real thumbnail generated from the video
+  return video.original_url;
+}
+
+// Simulated AI effects application
+async function applyAIEffects(supabaseClient, video, effect) {
+  // In a real implementation, this would apply ML effects to the video
+  // For now, we'll just return the original video
+  
+  // Return the original URL as the processed URL for demo purposes
+  // In production, this would be a new URL for the processed video
+  return video.original_url;
 }
