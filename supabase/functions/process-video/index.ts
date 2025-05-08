@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Get video ID from the request
+    // Get video ID and effect from the request
     const { videoId, effect } = await req.json();
 
     if (!videoId) {
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
   }
 });
 
-// Enhanced AI video processing function
+// Enhanced AI video processing function with multiple effects
 async function processVideoWithAI(supabaseClient, videoId, effect = 'enhance') {
   console.log(`Starting AI processing for video ${videoId} with effect: ${effect}`);
   
@@ -76,8 +76,9 @@ async function processVideoWithAI(supabaseClient, videoId, effect = 'enhance') {
     console.log(`Processing video from URL: ${originalUrl}`);
     
     // In a real implementation, this would call computer vision APIs or ML services
-    // Here we're simulating the AI processing time
-    await new Promise(resolve => setTimeout(resolve, 8000));
+    // Here we're simulating the AI processing time based on the selected effect
+    const processingTime = getProcessingTimeForEffect(effect);
+    await new Promise(resolve => setTimeout(resolve, processingTime));
     
     // Generate a thumbnail from the video (simulated)
     const thumbnailUrl = await generateThumbnail(supabaseClient, video);
@@ -92,11 +93,12 @@ async function processVideoWithAI(supabaseClient, videoId, effect = 'enhance') {
         status: 'completed',
         processed_url: processedUrl,
         thumbnail_url: thumbnailUrl,
+        effect: effect,
         updated_at: new Date().toISOString()
       })
       .eq('id', videoId);
     
-    console.log(`Processing completed for video ${videoId}`);
+    console.log(`Processing completed for video ${videoId} with effect: ${effect}`);
   } catch (error) {
     console.error(`Processing failed for video ${videoId}:`, error);
     
@@ -108,6 +110,23 @@ async function processVideoWithAI(supabaseClient, videoId, effect = 'enhance') {
         updated_at: new Date().toISOString()
       })
       .eq('id', videoId);
+  }
+}
+
+// Get processing time based on effect type (simulated)
+function getProcessingTimeForEffect(effect) {
+  const baseTime = 5000; // 5 seconds base
+  
+  switch(effect) {
+    case 'cinematic':
+      return baseTime + 3000; // 8 seconds
+    case 'portrait':
+      return baseTime + 1500; // 6.5 seconds
+    case 'vintage':
+      return baseTime + 2000; // 7 seconds
+    case 'enhance':
+    default:
+      return baseTime; // 5 seconds
   }
 }
 

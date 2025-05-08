@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -18,6 +19,7 @@ import { v4 as uuidv4 } from "uuid";
 const uploadSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().optional(),
+  effect: z.enum(["enhance", "cinematic", "portrait", "vintage"]).default("enhance"),
   video: z.instanceof(File, { message: "Video file is required" })
 });
 
@@ -36,6 +38,7 @@ export const UploadVideo = () => {
     defaultValues: {
       title: "",
       description: "",
+      effect: "enhance",
     }
   });
 
@@ -83,14 +86,15 @@ export const UploadVideo = () => {
         description: data.description || null,
         original_url: publicUrlData.publicUrl,
         status: "pending",
-        user_id: user.id
+        user_id: user.id,
+        effect: data.effect
       });
 
       if (dbError) throw dbError;
 
       toast({
         title: "Upload successful!",
-        description: "Your video has been uploaded and is being processed.",
+        description: "Your video has been uploaded and is ready for processing.",
       });
       
       setOpen(false);
@@ -170,6 +174,36 @@ export const UploadVideo = () => {
                       {...field} 
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="effect"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Effect Style</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an effect style" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="enhance">Enhance (Default)</SelectItem>
+                      <SelectItem value="cinematic">Cinematic</SelectItem>
+                      <SelectItem value="portrait">Portrait Focus</SelectItem>
+                      <SelectItem value="vintage">Vintage</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Choose how GlowUp AI will process your video
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

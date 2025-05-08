@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -116,12 +115,10 @@ export const VideoList = () => {
   };
 
   const handleShareVideo = async (video: Video) => {
-    // In a production app, this would generate a sharing link
-    // For this demo, we'll simulate copying a link to clipboard
+    // Update to use the shared-video route
     try {
-      await navigator.clipboard.writeText(
-        `${window.location.origin}/shared-video/${video.id}`
-      );
+      const shareUrl = `${window.location.origin}/shared-video/${video.id}`;
+      await navigator.clipboard.writeText(shareUrl);
       toast({
         title: "Link Copied",
         description: "Video sharing link copied to clipboard!",
