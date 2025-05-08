@@ -153,7 +153,7 @@ const VideoCard = ({ video }: { video: Video }) => {
           </span>
           
           {video.status === 'completed' && (
-            <GlowUpButton size="sm" variant="link" className="p-0">
+            <GlowUpButton size="sm" variant="outline" className="p-0">
               <Eye className="w-4 h-4 mr-1" /> View
             </GlowUpButton>
           )}
