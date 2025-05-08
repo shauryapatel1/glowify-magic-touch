@@ -90,10 +90,49 @@ export type Database = {
         }
         Relationships: []
       }
+      video_analytics: {
+        Row: {
+          client_ip: string | null
+          country: string | null
+          id: string
+          referer: string | null
+          user_agent: string | null
+          video_id: string | null
+          viewed_at: string | null
+        }
+        Insert: {
+          client_ip?: string | null
+          country?: string | null
+          id?: string
+          referer?: string | null
+          user_agent?: string | null
+          video_id?: string | null
+          viewed_at?: string | null
+        }
+        Update: {
+          client_ip?: string | null
+          country?: string | null
+          id?: string
+          referer?: string | null
+          user_agent?: string | null
+          video_id?: string | null
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_analytics_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       videos: {
         Row: {
           created_at: string | null
           description: string | null
+          effect: string | null
           id: string
           original_url: string | null
           processed_url: string | null
@@ -102,10 +141,12 @@ export type Database = {
           title: string
           updated_at: string | null
           user_id: string | null
+          view_count: number | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
+          effect?: string | null
           id?: string
           original_url?: string | null
           processed_url?: string | null
@@ -114,10 +155,12 @@ export type Database = {
           title: string
           updated_at?: string | null
           user_id?: string | null
+          view_count?: number | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
+          effect?: string | null
           id?: string
           original_url?: string | null
           processed_url?: string | null
@@ -126,6 +169,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
           user_id?: string | null
+          view_count?: number | null
         }
         Relationships: []
       }
@@ -134,7 +178,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_view_count: {
+        Args: { vid: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -3,3 +3,6 @@ project_id = "bxatzwhfdvptdniymjvw"
 
 [functions.process-video]
 verify_jwt = true
+
+[functions.record-view]
+verify_jwt = false

@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
     const timestamp = new Date().toISOString();
     const clientIP = req.headers.get('x-forwarded-for') || 'unknown';
     const userAgent = req.headers.get('user-agent') || 'unknown';
+    const referer = req.headers.get('referer') || 'direct';
     
     const { error } = await supabaseAdmin
       .from('video_analytics')
@@ -41,6 +42,7 @@ Deno.serve(async (req) => {
         viewed_at: timestamp,
         client_ip: clientIP,
         user_agent: userAgent,
+        referer: referer
       });
 
     if (error) throw error;
