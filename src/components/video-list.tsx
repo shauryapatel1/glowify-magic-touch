@@ -35,7 +35,7 @@ export const VideoList = () => {
         id: video.id,
         title: video.title,
         description: video.description,
-        status: video.status as VideoStatus,
+        status: video.status as VideoStatus, // Explicitly cast to VideoStatus
         thumbnail_url: video.thumbnail_url,
         created_at: video.created_at || "",
         processed_url: video.processed_url,
@@ -70,7 +70,7 @@ export const VideoList = () => {
                 id: payload.new.id,
                 title: payload.new.title,
                 description: payload.new.description,
-                status: payload.new.status as VideoStatus,
+                status: payload.new.status as VideoStatus, // Explicitly cast to VideoStatus
                 thumbnail_url: payload.new.thumbnail_url,
                 created_at: payload.new.created_at || "",
                 processed_url: payload.new.processed_url,
