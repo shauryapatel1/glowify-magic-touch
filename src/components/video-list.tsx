@@ -30,10 +30,17 @@ export const VideoList = () => {
 
       if (error) throw error;
       
-      // Ensure we cast status to VideoStatus type
-      const typedVideos = data?.map(video => ({
-        ...video,
-        status: video.status as VideoStatus
+      // Transform the raw data into Video objects with proper typing
+      const typedVideos: Video[] = data?.map(video => ({
+        id: video.id,
+        title: video.title,
+        description: video.description,
+        status: video.status as VideoStatus,
+        thumbnail_url: video.thumbnail_url,
+        created_at: video.created_at || "",
+        processed_url: video.processed_url,
+        effect: video.effect || "enhance",
+        view_count: video.view_count
       })) || [];
       
       setVideos(typedVideos);
@@ -59,7 +66,17 @@ export const VideoList = () => {
           // Update the video in the list when its status changes
           setVideos(currentVideos => 
             currentVideos.map(video => 
-              video.id === payload.new.id ? {...payload.new, status: payload.new.status as VideoStatus} : video
+              video.id === payload.new.id ? {
+                id: payload.new.id,
+                title: payload.new.title,
+                description: payload.new.description,
+                status: payload.new.status as VideoStatus,
+                thumbnail_url: payload.new.thumbnail_url,
+                created_at: payload.new.created_at || "",
+                processed_url: payload.new.processed_url,
+                effect: payload.new.effect || "enhance",
+                view_count: payload.new.view_count
+              } : video
             )
           );
           
@@ -84,7 +101,7 @@ export const VideoList = () => {
     
     setIsProcessing(true);
     try {
-      const result = await processVideo(video.id, video.effect || "enhance");
+      const result = await processVideo(video.id, video.effect as any);
       
       if (!result.success) throw new Error(result.error);
       

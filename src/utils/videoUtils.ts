@@ -1,6 +1,5 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 // Types
 export type VideoEffect = "enhance" | "cinematic" | "portrait" | "vintage";
@@ -15,7 +14,7 @@ export type Video = {
   thumbnail_url: string | null;
   created_at: string;
   processed_url: string | null;
-  effect: VideoEffect;
+  effect: VideoEffect | string; // Allow string for database compatibility
   view_count?: number;
 };
 
