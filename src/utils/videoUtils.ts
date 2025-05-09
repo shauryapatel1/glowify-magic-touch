@@ -72,7 +72,7 @@ export const recordVideoView = async (videoId: string) => {
   }
 };
 
-export const getEffectLabel = (effect: VideoEffect): string => {
+export const getEffectLabel = (effect: VideoEffect | string): string => {
   switch (effect) {
     case "enhance": return "Enhanced";
     case "cinematic": return "Cinematic";

@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { VideoGrid } from "./video/video-grid";
 import { VideoPlayerDialog } from "./video/video-player-dialog";
-import { Video, VideoStatus, processVideo, shareVideo, recordVideoView } from "@/utils/videoUtils";
+import { Video, VideoStatus, processVideo, shareVideo } from "@/utils/videoUtils";
 
 export const VideoList = () => {
   const { user } = useAuth();
