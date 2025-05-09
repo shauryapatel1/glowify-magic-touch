@@ -1,9 +1,11 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Share, Download } from "lucide-react";
 import { Video } from "@/utils/videoUtils";
+import { EnhancedVideoPlayer } from "./enhanced-video-player";
+import { VideoProcessingService } from "@/services/VideoProcessingService";
 
 type VideoPlayerDialogProps = {
   isOpen: boolean;
@@ -18,6 +20,13 @@ export const VideoPlayerDialog = ({
   video,
   onShare
 }: VideoPlayerDialogProps) => {
+  useEffect(() => {
+    // Record view when dialog opens with a valid video
+    if (isOpen && video) {
+      VideoProcessingService.recordView(video.id);
+    }
+  }, [isOpen, video]);
+
   if (!video) return null;
   
   return (
@@ -30,14 +39,7 @@ export const VideoPlayerDialog = ({
           )}
         </DialogHeader>
         
-        <div className="relative aspect-video bg-black rounded-md overflow-hidden">
-          <video 
-            src={video.processed_url || ''} 
-            controls 
-            className="w-full h-full object-contain"
-            poster={video.thumbnail_url || undefined}
-          />
-        </div>
+        <EnhancedVideoPlayer video={video} autoPlay={true} />
         
         <div className="flex justify-between items-center mt-4">
           <span className="text-sm text-white/50">

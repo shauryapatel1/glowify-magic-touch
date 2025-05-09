@@ -9,6 +9,7 @@ import { Footer } from "@/components/footer";
 import { VideoList } from "@/components/video-list";
 import { UploadVideo } from "@/components/upload-video";
 import { GridBackground } from "@/components/grid-background";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 const Dashboard = () => {
   const { user, isLoading } = useAuth();
@@ -41,7 +42,9 @@ const Dashboard = () => {
           <UploadVideo />
           
           <div className="mt-16">
-            <VideoList />
+            <ErrorBoundary>
+              <VideoList />
+            </ErrorBoundary>
           </div>
         </div>
       </main>

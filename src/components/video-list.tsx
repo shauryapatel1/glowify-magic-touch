@@ -1,107 +1,27 @@
 
-import React, { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import React, { useState } from "react";
+import { useVideos } from "@/hooks/use-videos";
+import { useToast } from "@/hooks/use-toast";
 import { GlowUpCard } from "@/components/ui/glow-up-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
 import { VideoGrid } from "./video/video-grid";
 import { VideoPlayerDialog } from "./video/video-player-dialog";
-import { Video, VideoStatus, processVideo, shareVideo } from "@/utils/videoUtils";
+import { Video, VideoStatus } from "@/utils/videoUtils";
+import { VideoProcessingService } from "@/services/VideoProcessingService";
 
 export const VideoList = () => {
-  const { user } = useAuth();
-  const [videos, setVideos] = useState<Video[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { videos, isLoading } = useVideos();
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-
-  const fetchVideos = async () => {
-    if (!user) return;
-    
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("videos")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      
-      // Transform the raw data into Video objects with proper typing
-      const typedVideos: Video[] = data?.map(video => ({
-        id: video.id,
-        title: video.title,
-        description: video.description,
-        status: video.status as VideoStatus, // Explicitly cast to VideoStatus
-        thumbnail_url: video.thumbnail_url,
-        created_at: video.created_at || "",
-        processed_url: video.processed_url,
-        effect: video.effect || "enhance",
-        view_count: video.view_count
-      })) || [];
-      
-      setVideos(typedVideos);
-    } catch (error) {
-      console.error("Error fetching videos:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!user) return;
-    
-    fetchVideos();
-    
-    // Set up a subscription for real-time updates
-    const channel = supabase
-      .channel('videos-updates')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'videos' },
-        (payload) => {
-          // Update the video in the list when its status changes
-          setVideos(currentVideos => 
-            currentVideos.map(video => 
-              video.id === payload.new.id ? {
-                id: payload.new.id,
-                title: payload.new.title,
-                description: payload.new.description,
-                status: payload.new.status as VideoStatus, // Explicitly cast to VideoStatus
-                thumbnail_url: payload.new.thumbnail_url,
-                created_at: payload.new.created_at || "",
-                processed_url: payload.new.processed_url,
-                effect: payload.new.effect || "enhance",
-                view_count: payload.new.view_count
-              } : video
-            )
-          );
-          
-          // Show toast notification for completed videos
-          if (payload.new.status === 'completed' && payload.old.status === 'processing') {
-            toast({
-              title: "Video Processing Complete",
-              description: `"${payload.new.title}" is ready to view!`,
-            });
-          }
-        }
-      )
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, toast]);
 
   const handleProcessVideo = async (video: Video) => {
     if (isProcessing) return;
     
     setIsProcessing(true);
     try {
-      const result = await processVideo(video.id, video.effect as any);
+      const result = await VideoProcessingService.processVideo(video);
       
       if (!result.success) throw new Error(result.error);
       
@@ -109,9 +29,6 @@ export const VideoList = () => {
         title: "Processing Started",
         description: "Your video is being enhanced with AI effects.",
       });
-      
-      // Refresh the videos list
-      fetchVideos();
     } catch (error: any) {
       console.error("Error processing video:", error);
       toast({
@@ -125,7 +42,7 @@ export const VideoList = () => {
   };
 
   const handleShareVideo = async (video: Video) => {
-    const result = await shareVideo(video.id);
+    const result = await VideoProcessingService.shareVideo(video.id);
     
     if (result.success) {
       toast({
@@ -136,6 +53,9 @@ export const VideoList = () => {
   };
 
   const handleViewVideo = (video: Video) => {
+    // Record view when a video is watched
+    VideoProcessingService.recordView(video.id);
+    
     setSelectedVideo(video);
     setIsPlayerOpen(true);
   };
